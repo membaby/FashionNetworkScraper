@@ -1,22 +1,10 @@
-import mysql.connector
+import sqlite3
 
 class Pipeline:
-    HOST = 'localhost'
-    USER = 'root'
-    PORT = 3306
-    PASSWORD = 'brands123'
-
+    
     def __init__(self):
-        db = mysql.connector.connect(
-            host = self.HOST,
-            user = self.USER,
-            port = self.PORT,
-            password = self.PASSWORD,
-        )
+        db = sqlite3.connect('fashion_network.db')
         cursor = db.cursor()
-        cursor.execute('DROP DATABASE IF EXISTS fashion_network')
-        cursor.execute('CREATE DATABASE IF NOT EXISTS fashion_network')
-        cursor.execute('USE fashion_network')
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS articles (
                 title        TEXT,
@@ -29,7 +17,8 @@ class Pipeline:
                 url          VARCHAR(255) UNIQUE,
                 keyword      TEXT,
                 section      TEXT,
-                created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+                created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+                imported     INTEGER DEFAULT 0
             );
         ''')
         db.commit()
@@ -37,19 +26,12 @@ class Pipeline:
         db.close()
     
     def DBInstance(self):
-        db = mysql.connector.connect(
-            host = self.HOST,
-            user = self.USER,
-            port = self.PORT,
-            password = self.PASSWORD,
-            database = 'fashion_network'
-        )
-        return db
+        return sqlite3.connect('fashion_network.db')
     
     def get_articles(self, keyword):
         db = self.DBInstance()
         cursor = db.cursor()
-        cursor.execute("SELECT url FROM articles WHERE keyword = %s", (keyword,))
+        cursor.execute("SELECT url FROM articles WHERE keyword = ?", (keyword,))
         articles = cursor.fetchall()
         cursor.close()
         db.close()
@@ -58,7 +40,7 @@ class Pipeline:
     def article_exists(self, url):
         db = self.DBInstance()
         cursor = db.cursor()
-        cursor.execute("SELECT url FROM articles WHERE url = %s", (url,))
+        cursor.execute("SELECT url FROM articles WHERE url = ?", (url,))
         article = cursor.fetchone()
         cursor.close()
         db.close()
@@ -70,7 +52,7 @@ class Pipeline:
         try:
             cursor.execute('''
                 INSERT INTO articles (title, published_at, author, reading_time, sub_title, content, image, url, keyword, section)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 article['Article Title'],
                 article['Date of Article'],

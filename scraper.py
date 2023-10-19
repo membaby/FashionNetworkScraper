@@ -33,13 +33,14 @@ class FashionNetworkScraper:
         articles = soup.find('div', class_='container-fluid').find_all('div', class_='home__item-card')
         results = []
         for article in articles:
+            if tags not in article.text: continue
             link = article.find('a')['href']
             results.append(link)
+        if not articles: return None
         print(f'[+] Found {len(results)} articles for {tags} on page {page}')
         return results
 
     def getArticle(self, keyword, link):
-
         for trial in range(10):
             try:
                 response = requests.request("GET", link, headers=self.headers)
@@ -56,7 +57,7 @@ class FashionNetworkScraper:
             'Article Image URL': soup.find('img', class_='news-image')['src'] if soup.find('img', class_='news-image') else soup.find('center').find('img')['src'] if soup.find('center') and soup.find('center').find('img') else None,
             'Article Title': soup.find('h1', class_='newsTitle').text if soup.find('h1', class_='newsTitle') else None,
             'Keyword': keyword,
-            'Article Details': soup.find('p', class_='article-content--texte').text.strip() if soup.find('p', class_='article-content--texte') else None,
+            'Article Details': str(soup.find('p', class_='article-content--texte')) if soup.find('p', class_='article-content--texte') else None,
             'Date of Article': soup.find('div', class_='newsPublishedAt').find('span').text.replace('today', '').strip() if soup.find('div', class_='newsPublishedAt') else None,
             'author': soup.find('a', itemprop="name")['title'] if soup.find('a', itemprop="name") else None,
             'reading_time': soup.find('div', class_='newsReadingTime').find('span').text.replace('access_time', '').strip() if soup.find('div', class_='newsReadingTime') else None,
@@ -81,14 +82,12 @@ if __name__ == '__main__':
         article_links = []
         while True:
             results = scraper.getResults(keyword, page)
+            if results is None: break
             page += 1
             if results:
                 for result in results:
                     if not pipeline.article_exists(result):
                         article_links.append(result)
-                # if len(results) != 60 or all(link in existing_links for link in results):
-                if len(results) != 60:
-                    break
             else:
                 break
 
